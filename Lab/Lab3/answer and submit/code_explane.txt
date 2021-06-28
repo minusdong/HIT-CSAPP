@@ -1,0 +1,574 @@
+strings_not_equal函数有两个参数：
+%rdi 是主程序 main 传来的的参数---键盘输入或文件读取的字符串；
+%rsi 是一个程序自带的数据段。
+判断输入的字符串和 %rsi 中的字符串是否相等，如果相等则令 %eax 为 0，否则为 1。
+00000000004017c5 <strings_not_equal>:
+  4017c5:	41 54                	push   %r12
+  4017c7:	55                   	push   %rbp
+  4017c8:	53                   	push   %rbx
+  4017c9:	48 89 fb             	mov    %rdi,%rbx
+  4017cc:	48 89 f5             	mov    %rsi,%rbp
+  4017cf:	e8 dd ff ff ff       	callq  4017b1 <string_length>
+  4017d4:	41 89 c4             	mov    %eax,%r12d
+  4017d7:	48 89 ef             	mov    %rbp,%rdi
+  4017da:	e8 d2 ff ff ff       	callq  4017b1 <string_length>
+  4017df:	41 39 c4             	cmp    %eax,%r12d
+  4017e2:	75 1d                	jne    401801 <strings_not_equal+0x3c>
+  4017e4:	0f b6 03             	movzbl (%rbx),%eax
+  4017e7:	84 c0                	test   %al,%al
+  4017e9:	74 0f                	je     4017fa <strings_not_equal+0x35>
+  4017eb:	38 45 00             	cmp    %al,0x0(%rbp)
+  4017ee:	75 1b                	jne    40180b <strings_not_equal+0x46>
+  4017f0:	48 83 c3 01          	add    $0x1,%rbx
+  4017f4:	48 83 c5 01          	add    $0x1,%rbp
+  4017f8:	eb ea                	jmp    4017e4 <strings_not_equal+0x1f>
+  4017fa:	b8 00 00 00 00       	mov    $0x0,%eax
+  4017ff:	eb 05                	jmp    401806 <strings_not_equal+0x41>
+  401801:	b8 01 00 00 00       	mov    $0x1,%eax
+  401806:	5b                   	pop    %rbx
+  401807:	5d                   	pop    %rbp
+  401808:	41 5c                	pop    %r12
+  40180a:	c3                   	retq   
+  40180b:	b8 01 00 00 00       	mov    $0x1,%eax
+  401810:	eb f4                	jmp    401806 <strings_not_equal+0x41>
+
+00000000004013ec <phase_1>:
+  4013ec:	48 83 ec 08          	sub    $0x8,%rsp
+	# %rdi 保存着来自 read_line 输入或读取的字符串的返回值
+  4013f0:	be 4c 31 40 00       	mov    $0x40314c,%esi
+	# %rdi 未被修改直接传给函数 strings_not_equal
+  4013f5:	e8 cb 03 00 00       	callq  4017c5 <strings_not_equal>
+	# 检查输入的字符串与 0x40314c 地址下保存的字符串是否相等
+  4013fa:	85 c0                	test   %eax,%eax
+  4013fc:	75 05                	jne    401403 <phase_1+0x17>
+	# 若 %eax != 0，即两字符串不相等，则爆炸
+  4013fe:	48 83 c4 08          	add    $0x8,%rsp
+	# 若 %eax == 0，即两字符串相等，则函数返回
+  401402:	c3                   	retq   
+  401403:	e8 9f 04 00 00       	callq  4018a7 <explode_bomb>
+  401408:	eb f4                	jmp    4013fe <phase_1+0x12>
+
+查看地址 0x40314c 中的内容得到密码为：Crikey! I have lost my mojo!
+
+
+00000000004018cb <read_six_numbers>:
+  4018cb:	48 83 ec 08          	sub    $0x8,%rsp
+  4018cf:	48 89 f2             	mov    %rsi,%rdx
+  4018d2:	48 8d 4e 04          	lea    0x4(%rsi),%rcx
+  4018d6:	48 8d 46 14          	lea    0x14(%rsi),%rax
+  4018da:	50                   	push   %rax
+  4018db:	48 8d 46 10          	lea    0x10(%rsi),%rax
+  4018df:	50                   	push   %rax
+  4018e0:	4c 8d 4e 0c          	lea    0xc(%rsi),%r9
+  4018e4:	4c 8d 46 08          	lea    0x8(%rsi),%r8
+  4018e8:	be 2b 33 40 00       	mov    $0x40332b,%esi
+  4018ed:	b8 00 00 00 00       	mov    $0x0,%eax
+  4018f2:	e8 19 f8 ff ff       	callq  401110 <__isoc99_sscanf@plt>
+  4018f7:	48 83 c4 10          	add    $0x10,%rsp
+  4018fb:	83 f8 05             	cmp    $0x5,%eax
+  4018fe:	7e 05                	jle    401905 <read_six_numbers+0x3a>
+  401900:	48 83 c4 08          	add    $0x8,%rsp
+  401904:	c3                   	retq   
+  401905:	e8 9d ff ff ff       	callq  4018a7 <explode_bomb>
+
+000000000040140a <phase_2>:
+  40140a:	53                   	push   %rbx
+  40140b:	48 83 ec 20          	sub    $0x20,%rsp
+  40140f:	48 89 e6             	mov    %rsp,%rsi
+	# 将栈地址 %rsp 传递给 %rsi 传递给函数 read_six_numbers
+  401412:	e8 b4 04 00 00       	callq  4018cb <read_six_numbers>
+	# 读取四个 int 型整数，并且存储在 %rsp~%rsp + 0x20 保存的地址中
+  401417:	83 3c 24 00          	cmpl   $0x0,(%rsp)
+  40141b:	75 07                	jne    401424 <phase_2+0x1a>
+	# 读取的第一个数若不等于 0，即 (%rsp) != 0，则爆炸
+  40141d:	83 7c 24 04 01       	cmpl   $0x1,0x4(%rsp)
+  401422:	74 05                	je     401429 <phase_2+0x1f>
+	# 读取的第二个数若不等于 1，即 (%rsp + 0x4) != 1，则爆炸
+	# 由此确认读取的第一二个数必须为 0 和 1
+  401424:	e8 7e 04 00 00       	callq  4018a7 <explode_bomb>
+  401429:	bb 02 00 00 00       	mov    $0x2,%ebx
+	# %ebx = 2
+  40142e:	eb 08                	jmp    401438 <phase_2+0x2e>
+  401430:	e8 72 04 00 00       	callq  4018a7 <explode_bomb>
+  401435:	83 c3 01             	add    $0x1,%ebx
+	# %ebx ++
+  401438:	83 fb 05             	cmp    $0x5,%ebx
+  40143b:	7f 1b                	jg     401458 <phase_2+0x4e>
+	# %ebx > 5，则函数返回
+  40143d:	48 63 d3             	movslq %ebx,%rdx
+	# 符号扩展 %rdx = %ebx
+  401440:	8d 4b fe             	lea    -0x2(%rbx),%ecx
+	# %ecx = %rbx - 2
+  401443:	48 63 c9             	movslq %ecx,%rcx
+	# 符号扩展 %rcx = %ecx
+  401446:	8d 43 ff             	lea    -0x1(%rbx),%eax
+	# %eax = %rbx  - 1
+  401449:	48 98                	cltq
+	# 符号扩展 %rax = %eax
+  40144b:	8b 04 84             	mov    (%rsp,%rax,4),%eax
+  40144e:	03 04 8c             	add    (%rsp,%rcx,4),%eax
+	# %eax = (%rsp + 4 * %rax) + (%rsp + 4 * %rcx)
+  401451:	39 04 94             	cmp    %eax,(%rsp,%rdx,4)
+  401454:	74 df                	je     401435 <phase_2+0x2b>
+	# 如果 %eax == %rsp + 4 * %rdx，再进行一次循环，否则爆炸
+  401456:	eb d8                	jmp    401430 <phase_2+0x26>
+  401458:	48 83 c4 20          	add    $0x20,%rsp
+  40145c:	5b                   	pop    %rbx
+  40145d:	c3                   	retq   
+
+在上述循环中，每次循环都将 %ebx 的值进行减一减二运算赋给 %ecx 和 %eax
+比较输入的第 %ebx 个数是否和第 %ecx 和 %eax 个数相等
+将 401429 到 401456 描述为 C 语言为 for 循环
+假设输入的六个数表示为数组 six_num[6]
+for (ebx = 2; ebx <= 5; ebx++) {
+	if (six_num[ebx] == six_num[ebx - 1] + six_num[ebx - 2])
+		发生爆炸;
+}
+显然，这组数据必须是是斐波那契数列中的一部分，
+在已经确定第一二个数为 0 和 1 的情况下，也就能确定后面的四个数分别为 1，2，3，5
+
+
+000000000040145e <phase_3>:
+  40145e:	48 83 ec 18          	sub    $0x18,%rsp
+  401462:	48 8d 4c 24 08       	lea    0x8(%rsp),%rcx
+  401467:	48 8d 54 24 0c       	lea    0xc(%rsp),%rdx
+  40146c:	be 37 33 40 00       	mov    $0x403337,%esi
+	# 0x403337 储存着 "%d %d"，输入两个 int 型数据
+  401471:	b8 00 00 00 00       	mov    $0x0,%eax
+	# %eax = 0
+  401476:	e8 95 fc ff ff       	callq  401110 <__isoc99_sscanf@plt>
+  40147b:	83 f8 01             	cmp    $0x1,%eax
+  40147e:	7e 12                	jle    401492 <phase_3+0x34>
+	# 如果 %eax <= 1，即输入少于两个数爆炸，要输入个数 >= 2
+  401480:	8b 44 24 0c          	mov    0xc(%rsp),%eax
+	# %eax = (%rsp + 0xc)
+  401484:	83 f8 07             	cmp    $0x7,%eax
+  401487:	77 4a                	ja     4014d3 <phase_3+0x75>
+	# 比较第一个数（无符号数）和 7，如果 %eax >7，爆炸
+  401489:	89 c0                	mov    %eax,%eax
+  40148b:	ff 24 c5 80 31 40 00 	jmpq   *0x403180(,%rax,8)
+	# 间接跳转，用地址 0x403180 + 8 * %rax 所保存的值作为跳转目标
+	# 查看地址 0x403180 以及之后所保存的内容
+  401492:	e8 10 04 00 00       	callq  4018a7 <explode_bomb>
+  401497:	eb e7                	jmp    401480 <phase_3+0x22>
+  401499:	b8 c9 03 00 00       	mov    $0x3c9,%eax
+	# 当 %rax = 0时，%eax = 0x3c9 = 969
+  40149e:	39 44 24 08          	cmp    %eax,0x8(%rsp)
+  4014a2:	75 42                	jne    4014e6 <phase_3+0x88>
+	# 检查 %eax 与第二个输入的数是否相等
+	# %eax != (%rsp + 8)，爆炸，否则函数返回
+  4014a4:	48 83 c4 18          	add    $0x18,%rsp
+  4014a8:	c3                   	retq   
+  4014a9:	b8 75 01 00 00       	mov    $0x175,%eax
+  4014ae:	eb ee                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 2时，%eax = 0x175 = 373，跳转到 0x40149e
+  4014b0:	b8 86 02 00 00       	mov    $0x286,%eax
+  4014b5:	eb e7                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 3时，%eax = 0x286 = 646，跳转到 0x40149e
+  4014b7:	b8 2b 01 00 00       	mov    $0x12b,%eax
+  4014bc:	eb e0                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 4时，%eax = 0x12b = 299，跳转到 0x40149e
+  4014be:	b8 bb 03 00 00       	mov    $0x3bb,%eax
+  4014c3:	eb d9                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 5时，%eax = 0x3bb = 955，跳转到 0x40149e
+  4014c5:	b8 71 02 00 00       	mov    $0x271,%eax
+  4014ca:	eb d2                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 6时，%eax = 0x271 = 625，跳转到 0x40149e
+  4014cc:	b8 6d 03 00 00       	mov    $0x36d,%eax
+  4014d1:	eb cb                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 7时，%eax = 0x36d = 877，跳转到 0x40149e
+  4014d3:	e8 cf 03 00 00       	callq  4018a7 <explode_bomb>
+  4014d8:	b8 00 00 00 00       	mov    $0x0,%eax
+  4014dd:	eb bf                	jmp    40149e <phase_3+0x40>
+  4014df:	b8 f7 02 00 00       	mov    $0x2f7,%eax
+  4014e4:	eb b8                	jmp    40149e <phase_3+0x40>
+	# 当 %rax = 1时，%eax = 0x2f7 = 759，跳转到 0x40149e
+  4014e6:	e8 bc 03 00 00       	callq  4018a7 <explode_bomb>
+  4014eb:	eb b7                	jmp    4014a4 <phase_3+0x46>
+
+分析 phase_3 ，首先输入两个及以上的 int 类型数据，比较第一个数和 7 的大小，
+由 ja 可知是一个无符号数，所以第一个输入范围在 0 到 7 之间，
+查询地址 0x403180 到 0x4031b0 所保存的内容，由此可以了解跳转到多少行，
+将某个常量赋值给 %eax 再与第二个输入的数进行比较，判断是否相等。
+
+由此得到几组答案：0 969/ 1 759/ 2 373/ 3 646/ 4 299/ 5 955/ 6 625/ 7 877
+
+
+00000000004014ed <func4>:
+  4014ed:	53                   	push   %rbx
+  4014ee:	89 d0                	mov    %edx,%eax
+  4014f0:	29 f0                	sub    %esi,%eax
+	# %eax = %edx - %esi
+  4014f2:	89 c3                	mov    %eax,%ebx
+  4014f4:	c1 eb 1f             	shr    $0x1f,%ebx
+  4014f7:	01 c3                	add    %eax,%ebx
+	# %ebx = %eax >> 31 + %eax（逻辑右移）
+  4014f9:	d1 fb                	sar    %ebx
+	# %ebx = %ebx >> 1（算术右移）
+	# 上述表示结果即为：%ebx = %eax / 2
+  4014fb:	01 f3                	add    %esi,%ebx
+	# %ebx = %ebx + %esi
+  4014fd:	39 fb                	cmp    %edi,%ebx
+  4014ff:	7f 06                	jg     401507 <func4+0x1a>
+  401501:	7c 10                	jl     401513 <func4+0x26>
+	# %edi == %ebx 时，返回 %ebx 的值
+  401503:	89 d8                	mov    %ebx,%eax
+  401505:	5b                   	pop    %rbx
+  401506:	c3                   	retq   
+  401507:	8d 53 ff             	lea    -0x1(%rbx),%edx
+  40150a:	e8 de ff ff ff       	callq  4014ed <func4>
+  40150f:	01 c3                	add    %eax,%ebx
+	# %ebx > %edi 时，%edx = %rbx - 1，%esi 不变传递给 func4
+	# 递归调用函数 func4 返回结果加到 %ebx 中
+  401511:	eb f0                	jmp    401503 <func4+0x16>
+  401513:	8d 73 01             	lea    0x1(%rbx),%esi
+  401516:	e8 d2 ff ff ff       	callq  4014ed <func4>
+  40151b:	01 c3                	add    %eax,%ebx
+	# %ebx < %edi 时，%edx 不变，%esi = %rbx + 1 传递给 func4
+	# 递归调用函数 func4 返回结果加到 %ebx 中
+  40151d:	eb e4                	jmp    401503 <func4+0x16>
+
+将函数 func4 转换为 C 语言，并运行（运行结果为 8）如下：
+
+#include <stdio.h>
+
+// x in %edx, y in %esi, t in %edi
+int func4 (int x, int y, int t) {
+    int n = x - y;
+    int m = n / 2 + y;
+    if (m == t) return m;
+    else if (m > t) return m + func4 (m - 1, y, t);
+    else return m + func4 (x, m + 1, t);
+}
+
+int main () {
+    for (int t = 0; t <= 14; t++) {
+        if (func4 (14, 0, t) == 35)
+            printf("%d\n", t);
+    }
+    return 0;
+}
+
+
+000000000040151f <phase_4>:
+  40151f:	48 83 ec 18          	sub    $0x18,%rsp
+  401523:	48 8d 4c 24 08       	lea    0x8(%rsp),%rcx
+  401528:	48 8d 54 24 0c       	lea    0xc(%rsp),%rdx
+  40152d:	be 37 33 40 00       	mov    $0x403337,%esi
+	# 0x403337 储存着 "%d %d"，输入两个 int 型数据
+  401532:	b8 00 00 00 00       	mov    $0x0,%eax
+  401537:	e8 d4 fb ff ff       	callq  401110 <__isoc99_sscanf@plt>
+  40153c:	83 f8 02             	cmp    $0x2,%eax
+  40153f:	75 0d                	jne    40154e <phase_4+0x2f>
+	# 如果 %eax != 2，即输入个数不等于 2，则爆炸
+  401541:	8b 44 24 0c          	mov    0xc(%rsp),%eax
+	# %eax = (%rsp + 0xc)
+  401545:	85 c0                	test   %eax,%eax
+  401547:	78 05                	js     40154e <phase_4+0x2f>
+	# %eax 是负数则爆炸
+  401549:	83 f8 0e             	cmp    $0xe,%eax
+  40154c:	7e 05                	jle    401553 <phase_4+0x34>
+	# %eax <= 14，则跳转，否则爆炸
+	# 0 <= %eax <= 14
+  40154e:	e8 54 03 00 00       	callq  4018a7 <explode_bomb>
+  401553:	ba 0e 00 00 00       	mov    $0xe,%edx
+  401558:	be 00 00 00 00       	mov    $0x0,%esi
+  40155d:	8b 7c 24 0c          	mov    0xc(%rsp),%edi
+	# %edi = (%rsp + 0xc)，将第一个输入传递给函数 fun4
+  401561:	e8 87 ff ff ff       	callq  4014ed <func4>
+  401566:	83 f8 23             	cmp    $0x23,%eax
+  401569:	75 07                	jne    401572 <phase_4+0x53>
+	# fun4 的返回值 != 0x23，爆炸，即第二个输入的数为 35
+  40156b:	83 7c 24 08 23       	cmpl   $0x23,0x8(%rsp)
+  401570:	74 05                	je     401577 <phase_4+0x58>
+	# (%rsp + 8) == 0x23，成功，函数返回
+  401572:	e8 30 03 00 00       	callq  4018a7 <explode_bomb>
+  401577:	48 83 c4 18          	add    $0x18,%rsp
+  40157b:	c3                   	retq
+
+首先 0x403337 储存着 "%d %d"，输入两个整型数据，若输入不是两个变量则爆炸。
+可知 %eax 的范围在 0 到 14 否则直接爆炸，而函数 func4 的返回值若不为 35直接爆炸，
+输入的第二个数不为 35 也会爆炸，因此输入的第二个数只能是35。
+由 func4 运行结果可知输入的第一个数只能是 8。
+
+
+
+
+000000000040157c <phase_5>:
+  40157c:	53                   	push   %rbx
+  40157d:	48 89 fb             	mov    %rdi,%rbx
+	# %rbx = %rdi
+  401580:	e8 2c 02 00 00       	callq  4017b1 <string_length>
+  401585:	83 f8 06             	cmp    $0x6,%eax
+	# %eax != 6，则爆炸，即输入字符串长度为6
+  401588:	75 25                	jne    4015af <phase_5+0x33>
+  40158a:	b9 00 00 00 00       	mov    $0x0,%ecx
+  40158f:	b8 00 00 00 00       	mov    $0x0,%eax
+	# %ecx = %eax = 0
+  401594:	83 f8 05             	cmp    $0x5,%eax
+  401597:	7f 1d                	jg     4015b6 <phase_5+0x3a>
+  401599:	48 63 d0             	movslq %eax,%rdx
+	# %rdx = %eax（符号扩展）
+  40159c:	0f b6 14 13          	movzbl (%rbx,%rdx,1),%edx
+	# %edx = (%rbx + %rdx)
+  4015a0:	83 e2 0f             	and    $0xf,%edx
+	# %edx = 0xf & %edx
+  4015a3:	03 0c 95 c0 31 40 00 	add    0x4031c0(,%rdx,4),%ecx
+	# %ecx = (0x4031c0 + 4 * %rdx)
+  4015aa:	83 c0 01             	add    $0x1,%eax
+	# %eax + 1
+  4015ad:	eb e5                	jmp    401594 <phase_5+0x18>
+	# %eax 从 0 到 5，循环进行将 6 个字符中的每个所对应的数加到结果当中
+  4015af:	e8 f3 02 00 00       	callq  4018a7 <explode_bomb>
+  4015b4:	eb d4                	jmp    40158a <phase_5+0xe>
+  4015b6:	83 f9 35             	cmp    $0x35,%ecx
+  4015b9:	75 02                	jne    4015bd <phase_5+0x41>
+	# %ecx != 0x35，爆炸，否则函数成功返回
+  4015bb:	5b                   	pop    %rbx
+  4015bc:	c3                   	retq   
+  4015bd:	e8 e5 02 00 00       	callq  4018a7 <explode_bomb>
+  4015c2:	eb f7                	jmp    4015bb <phase_5+0x3f>
+
+分析函数 phase_5，要输入一个长为 6 的字符串，将每个字符 ASCII 码所对应的数求和，
+对应关系为：取字符 ASCII 码的二进制最低四位作为角标，在相应中响应的结果
+查询地址 0x4031c0 到0x4031f0 储存的值，得到如下关系：
+////截图 + 对应表格
+最后要求求和的结果必须为 0x35 即53。
+由此得到一种可能性：fffffm
+
+
+00000000004015c4 <phase_6>:
+  4015c4:	41 54                	push   %r12
+  4015c6:	55                   	push   %rbp
+  4015c7:	53                   	push   %rbx
+  4015c8:	48 83 ec 50          	sub    $0x50,%rsp
+  4015cc:	48 8d 74 24 30       	lea    0x30(%rsp),%rsi
+  4015d1:	e8 f5 02 00 00       	callq  4018cb <read_six_numbers>
+  4015d6:	bd 00 00 00 00       	mov    $0x0,%ebp
+	# %ebp = 0
+  4015db:	eb 29                	jmp    401606 <phase_6+0x42>
+  4015dd:	e8 c5 02 00 00       	callq  4018a7 <explode_bomb>
+  4015e2:	eb 36                	jmp    40161a <phase_6+0x56>
+  4015e4:	83 c3 01             	add    $0x1,%ebx
+  4015e7:	83 fb 05             	cmp    $0x5,%ebx
+  4015ea:	7f 17                	jg     401603 <phase_6+0x3f>
+	# %ebx > 5，跳出比较的循环
+  4015ec:	48 63 c5             	movslq %ebp,%rax
+  4015ef:	48 63 d3             	movslq %ebx,%rdx
+	# %rax = %ebp, %rdx = %ebx，%rdx 始终比 %rax 大一
+  4015f2:	8b 7c 94 30          	mov    0x30(%rsp,%rdx,4),%edi
+  4015f6:	39 7c 84 30          	cmp    %edi,0x30(%rsp,%rax,4)
+	# 比较 (%rsp + 4 * %rdx + 0x30) 和 (%rsp + 4 * %rax + 0x30) 的值
+	# 若两值相等则爆炸，否则进行下一次内循环
+  4015fa:	75 e8                	jne    4015e4 <phase_6+0x20>
+  4015fc:	e8 a6 02 00 00       	callq  4018a7 <explode_bomb>
+  401601:	eb e1                	jmp    4015e4 <phase_6+0x20>
+  401603:	44 89 e5             	mov    %r12d,%ebp
+  401606:	83 fd 05             	cmp    $0x5,%ebp
+  401609:	7f 18                	jg     401623 <phase_6+0x5f>
+	# %ebp > 5，跳转出外循环
+  40160b:	48 63 c5             	movslq %ebp,%rax
+	# 符号扩展 %rax = %ebp
+  40160e:	8b 44 84 30          	mov    0x30(%rsp,%rax,4),%eax
+	# %eax = (%rsp + 4 * %rax + 0x30)
+  401612:	83 e8 01             	sub    $0x1,%eax
+  401615:	83 f8 05             	cmp    $0x5,%eax
+	# (%eax - 1) > 5，爆炸，即 %eax <= 6
+  401618:	77 c3                	ja     4015dd <phase_6+0x19>
+  40161a:	44 8d 65 01          	lea    0x1(%rbp),%r12d
+  40161e:	44 89 e3             	mov    %r12d,%ebx
+	# %ebx = r12d = %rbp + 1
+  401621:	eb c4                	jmp    4015e7 <phase_6+0x23>
+  401623:	be 00 00 00 00       	mov    $0x0,%esi
+# 到此为第一部分
+  401628:	eb 07                	jmp    401631 <phase_6+0x6d>
+  40162a:	48 89 14 cc          	mov    %rdx,(%rsp,%rcx,8)
+	# (%rsp + 8 * %rcx) = %rdx
+  40162e:	83 c6 01             	add    $0x1,%esi
+	# %esi++
+  401631:	83 fe 05             	cmp    $0x5,%esi
+	# %esi > 5，跳转出循环
+  401634:	7f 1c                	jg     401652 <phase_6+0x8e>
+  401636:	b8 01 00 00 00       	mov    $0x1,%eax
+  40163b:	ba d0 52 40 00       	mov    $0x4052d0,%edx
+	# %eax = 1, %edx = 0x4052d0
+  401640:	48 63 ce             	movslq %esi,%rcx
+	# %rcx = %esi（符号扩展）
+  401643:	39 44 8c 30          	cmp    %eax,0x30(%rsp,%rcx,4)
+  401647:	7e e1                	jle    40162a <phase_6+0x66>
+	# (%rsp + 4 * %rax + 0x30) <= %eax，进行跳转
+  401649:	48 8b 52 08          	mov    0x8(%rdx),%rdx
+  40164d:	83 c0 01             	add    $0x1,%eax
+  401650:	eb ee                	jmp    401640 <phase_6+0x7c>
+# 到此为第二部分
+  401652:	48 8b 1c 24          	mov    (%rsp),%rbx
+  401656:	48 89 d9             	mov    %rbx,%rcx
+  401659:	b8 01 00 00 00       	mov    $0x1,%eax
+	# %rbx = (%rsp), %rcx = %rbx, %eax = 1
+  40165e:	eb 11                	jmp    401671 <phase_6+0xad>
+  401660:	48 63 d0             	movslq %eax,%rdx
+  401663:	48 8b 14 d4          	mov    (%rsp,%rdx,8),%rdx
+	# %rdx = (%rsp + 8 * %rdx) = (%rsp + 8 * %eax) 
+  401667:	48 89 51 08          	mov    %rdx,0x8(%rcx)
+	# (%rcx + 8) = %rdx
+  40166b:	83 c0 01             	add    $0x1,%eax
+  40166e:	48 89 d1             	mov    %rdx,%rcx
+	# %eax = 1, %rcx = %rdx
+  401671:	83 f8 05             	cmp    $0x5,%eax
+  401674:	7e ea                	jle    401660 <phase_6+0x9c>
+  401676:	48 c7 41 08 00 00 00 	movq   $0x0,0x8(%rcx)
+  40167d:	00 
+# 到此为第三部分
+  40167e:	bd 00 00 00 00       	mov    $0x0,%ebp
+  401683:	eb 07                	jmp    40168c <phase_6+0xc8>
+  401685:	48 8b 5b 08          	mov    0x8(%rbx),%rbx
+	# %rbx = (%rbx + 8)
+  401689:	83 c5 01             	add    $0x1,%ebp
+	# %ebp++
+  40168c:	83 fd 04             	cmp    $0x4,%ebp
+  40168f:	7f 11                	jg     4016a2 <phase_6+0xde>
+	# %ebp > 4，函数返回
+  401691:	48 8b 43 08          	mov    0x8(%rbx),%rax
+	# %ebp <= 4，%rax = (%rbx + 8)
+  401695:	8b 00                	mov    (%rax),%eax
+  401697:	39 03                	cmp    %eax,(%rbx)
+  401699:	7d ea                	jge    401685 <phase_6+0xc1>
+  40169b:	e8 07 02 00 00       	callq  4018a7 <explode_bomb>
+  4016a0:	eb e3                	jmp    401685 <phase_6+0xc1>
+  4016a2:	48 83 c4 50          	add    $0x50,%rsp
+  4016a6:	5b                   	pop    %rbx
+  4016a7:	5d                   	pop    %rbp
+  4016a8:	41 5c                	pop    %r12
+  4016aa:	c3                   	retq   
+# 到此为第四部分
+
+代码第一部分表示输入的 6 个数分别都不相等，并且每个数都大于等于 1 小于等于 6
+代码第二部分对栈 %rsp + 8 * %rcx 地址中的值进行赋值，
+若输入的第 %rcx 个数小于等于 1，赋予 0x4052d0，
+否则赋予 0x4052d0 + 8 * (第 %rcx 个数 - 1)
+代码第三部分，将地址 0x4052d0 及其之后表示的链表重新连接
+代码第四部分检测链表重新连接后，六个节点是否按降序排列
+查看地址 0x4052d0 到 0x405320 的内容得到排序后的结果：2 1 6 5 4 3
+
+
+
+
+
+0000000000401a38 <phase_defused>:
+  401a38:	83 3d 2d 3d 00 00 06 	cmpl   $0x6,0x3d2d(%rip)        # 40576c <num_input_strings>
+  401a3f:	74 01                	je     401a42 <phase_defused+0xa>
+  401a41:	c3                   	retq   
+  401a42:	48 83 ec 68          	sub    $0x68,%rsp
+  401a46:	4c 8d 44 24 10       	lea    0x10(%rsp),%r8
+  401a4b:	48 8d 4c 24 08       	lea    0x8(%rsp),%rcx
+  401a50:	48 8d 54 24 0c       	lea    0xc(%rsp),%rdx
+  401a55:	be 81 33 40 00       	mov    $0x403381,%esi
+	# 0x403381 储存着 "%d %d %s"，输入两个整型数据和一个字符串型
+  401a5a:	bf 70 58 40 00       	mov    $0x405870,%edi
+  401a5f:	b8 00 00 00 00       	mov    $0x0,%eax
+  401a64:	e8 a7 f6 ff ff       	callq  401110 <__isoc99_sscanf@plt>
+  401a69:	83 f8 03             	cmp    $0x3,%eax
+  401a6c:	74 0f                	je     401a7d <phase_defused+0x45>
+  401a6e:	bf c0 32 40 00       	mov    $0x4032c0,%edi
+	# "Congratulations! You've defused the bomb!"
+  401a73:	e8 e8 f5 ff ff       	callq  401060 <puts@plt>
+  401a78:	48 83 c4 68          	add    $0x68,%rsp
+  401a7c:	c3                   	retq   
+  401a7d:	be 8a 33 40 00       	mov    $0x40338a,%esi
+	# 0x40338a 储存着字符串 DrEvil
+  401a82:	48 8d 7c 24 10       	lea    0x10(%rsp),%rdi
+  401a87:	e8 39 fd ff ff       	callq  4017c5 <strings_not_equal>
+  401a8c:	85 c0                	test   %eax,%eax
+	# 检测输入字符串与"DrEvil"是否相等
+	# %eax != 0
+  401a8e:	75 de                	jne    401a6e <phase_defused+0x36>
+  401a90:	bf 60 32 40 00       	mov    $0x403260,%edi
+	# "Curses, you've found the secret phase!"
+  401a95:	e8 c6 f5 ff ff       	callq  401060 <puts@plt>
+  401a9a:	bf 88 32 40 00       	mov    $0x403288,%edi
+	# "But finding it and solving it are quite different..."
+  401a9f:	e8 bc f5 ff ff       	callq  401060 <puts@plt>
+  401aa4:	b8 00 00 00 00       	mov    $0x0,%eax
+  401aa9:	e8 3a fc ff ff       	callq  4016e8 <secret_phase>
+  401aae:	eb be                	jmp    401a6e <phase_defused+0x36>
+
+00000000004016e8 <secret_phase>:
+  4016e8:	53                   	push   %rbx
+  4016e9:	e8 1c 02 00 00       	callq  40190a <read_line>
+  4016ee:	48 89 c7             	mov    %rax,%rdi
+  4016f1:	e8 4a fa ff ff       	callq  401140 <atoi@plt>
+  4016f6:	89 c3                	mov    %eax,%ebx
+  4016f8:	8d 40 ff             	lea    -0x1(%rax),%eax
+  4016fb:	3d e8 03 00 00       	cmp    $0x3e8,%eax
+  401700:	77 22                	ja     401724 <secret_phase+0x3c>
+  401702:	89 de                	mov    %ebx,%esi
+  401704:	bf f0 50 40 00       	mov    $0x4050f0,%edi
+	# 将地址 0x4050f0 传递给函数 fun7
+  401709:	e8 9d ff ff ff       	callq  4016ab <fun7>
+  40170e:	83 f8 04             	cmp    $0x4,%eax
+	# 比较函数 fun7 的返回值和 4，若 %eax != 4，爆炸
+  401711:	75 18                	jne    40172b <secret_phase+0x43>
+  401713:	bf 00 32 40 00       	mov    $0x403200,%edi
+  401718:	e8 43 f9 ff ff       	callq  401060 <puts@plt>
+  40171d:	e8 16 03 00 00       	callq  401a38 <phase_defused>
+  401722:	5b                   	pop    %rbx
+  401723:	c3                   	retq   
+  401724:	e8 7e 01 00 00       	callq  4018a7 <explode_bomb>
+  401729:	eb d7                	jmp    401702 <secret_phase+0x1a>
+  40172b:	e8 77 01 00 00       	callq  4018a7 <explode_bomb>
+  401730:	eb e1                	jmp    401713 <secret_phase+0x2b>
+
+
+00000000004016ab <fun7>:
+  4016ab:	48 85 ff             	test   %rdi,%rdi
+  4016ae:	74 32                	je     4016e2 <fun7+0x37>
+	# %rdi == 0，返回 -1
+  4016b0:	48 83 ec 08          	sub    $0x8,%rsp
+  4016b4:	8b 07                	mov    (%rdi),%eax
+	# %eax = (%rdi) = 0x24 = 36
+  4016b6:	39 f0                	cmp    %esi,%eax
+  4016b8:	7f 0c                	jg     4016c6 <fun7+0x1b>
+  4016ba:	75 17                	jne    4016d3 <fun7+0x28>
+  4016bc:	b8 00 00 00 00       	mov    $0x0,%eax
+	# %eax == %esi，返回 0
+  4016c1:	48 83 c4 08          	add    $0x8,%rsp
+  4016c5:	c3                   	retq   
+  4016c6:	48 8b 7f 08          	mov    0x8(%rdi),%rdi
+  4016ca:	e8 dc ff ff ff       	callq  4016ab <fun7>
+  4016cf:	01 c0                	add    %eax,%eax
+	# %eax > %esi，%rdi = %rdi + 8
+	# 将 %rdi 左子树的地址传递给函数 fun7
+	# %eax = 2 * %eax
+  4016d1:	eb ee                	jmp    4016c1 <fun7+0x16>
+  4016d3:	48 8b 7f 10          	mov    0x10(%rdi),%rdi
+  4016d7:	e8 cf ff ff ff       	callq  4016ab <fun7>
+  4016dc:	8d 44 00 01          	lea    0x1(%rax,%rax,1),%eax
+	# %eax < %esi，%rdi = %rdi + 16
+	# 将 %rdi 右子树的地址传递给函数 fun7
+	# %eax = 2 * %eax + 1
+  4016e0:	eb df                	jmp    4016c1 <fun7+0x16>
+  4016e2:	b8 ff ff ff ff       	mov    $0xffffffff,%eax
+  4016e7:	c3                   	retq   
+
+查看地址 0x4050f0 及其子树的内容，可以得到如下二叉查找树 BST：
+/////////截图+二叉树
+由函数 secret_phase，要求函数返回值为 4，4 = (0 + 1) * 2 * 2
+即先向左子树寻找两次小于 (%edi) 的值，再向右子树寻找一次大于 (%edi) 的值。
+
+所以隐藏阶段结果为：7
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

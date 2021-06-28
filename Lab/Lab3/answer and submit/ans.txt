@@ -1,0 +1,7 @@
+Crikey! I have lost my mojo!
+0 1 1 2 3 5
+2 373 DrEvil
+8 35
+fffffm    // ASCII最小的四位对应数组的数据之和为53
+2 1 6 5 4 3
+7
